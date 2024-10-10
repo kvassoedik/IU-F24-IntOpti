@@ -71,7 +71,26 @@ def create_initial_table(C, A, b, accuracy):
 
     table = roundTable(table, accuracy)
 
-    return table
+    return table    
+
+def get_solution(table, num_vars):
+
+    # Number of decision variables (excluding slack variables)
+    # Subtract 1 for the right-hand side column
+    
+    # Initialize the solution vector
+    solution = [0] * num_vars
+
+    for j in range(num_vars):
+        col = [table[i][j] for i in range(1, len(table))]
+        
+        # Check if the column corresponds to a basic variable
+        if col.count(1) == 1 and col.count(0) == len(col) - 1:
+            # Get the row where the value is 1
+            row = col.index(1)
+            solution[j] = table[row + 1][-1]  # Right-hand side value
+
+    return solution            
 
 if __name__ == "__main__":
     C, A, b, accuracy = get_input()
@@ -87,18 +106,22 @@ if __name__ == "__main__":
         printTable(initial_table, accuracy)
 
         table = initial_table.copy()
-
         iteration = 0
 
-        while any(elem < 0 for elem in table[0]):
+        while any(elem < 0 for elem in table[0][:-1]):
             iteration += 1
             pivot = findPivot(table)
             table = replaceVars(table, pivot[0], pivot[1])
             print(f"Iteration {iteration}:")
-            printTable(table,accuracy)
+            printTable(table, accuracy)
             print()
+
+        num_vars = len(C) - C.count(0) - 1
+        solution = get_solution(table, num_vars)
+        objective_value = table[0][-1]
+
+        print("Optimal solution (decision variables):", np.round(solution, accuracy))
+        print(f"Optimal value of the objective function: {objective_value:.{accuracy}f}")
 
     else:
         print(linear_check)
-
-    
