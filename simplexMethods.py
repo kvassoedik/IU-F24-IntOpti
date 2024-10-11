@@ -8,8 +8,10 @@ def printTable(table, accuracy):
 def findMinInd(arr):
     minInd = 0
     for i in range(len(arr)):
+        #print(f"arr[{i}]: {arr[i]}")
         if arr[i] < arr[minInd]:
             minInd = i
+    #print(minInd)
     return minInd
 
 def roundTable(table, accuracy):
@@ -22,7 +24,7 @@ def findPivot(table):
     pivotCol = findMinInd(table[0])
     ratios = []
     for i in range(1, len(table)):
-        if table[i][pivotCol] == 0:
+        if table[i][pivotCol] == 0 or table[i][-1] / table[i][pivotCol] < 0:
             ratios.append(1000000)
         else:
             ratios.append(table[i][-1] / table[i][pivotCol])
