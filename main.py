@@ -1,5 +1,6 @@
 import numpy as np
-from simplexMethods import findPivot, replaceVars, printTable, roundTable
+from simplexMethods import findPivot, replaceVars
+from utils import printTable, roundTable
 
 # Input from the user
 def get_input():
@@ -41,34 +42,21 @@ def check_linearity(C, A, b):
 def create_initial_table(C, A, b, accuracy):
     # Number of variables and constraints
     num_terms = len(b)
-
-    # Construct the identity matrix for slack variables
-    # slack_variables = np.eye(num_terms)
-
-    # Concatenate A with slack variables
-    # table = np.hstack((A, slack_variables, np.array(b).reshape(-1, 1)))
-    # table = np.hstack((A, np.array(b).reshape(-1, 1)))
     
     # Add the objective row (with negated C)
-    # objective_row = np.array(C + [0]*num_terms + [0]) * -1
-    # objective_row = np.array(C + [0]) * -1
     objective_row = C
     for i in range(len(objective_row)):
         objective_row[i] = -objective_row[i]
     objective_row.append(0)
-
+    
+    # Combine the objective and constraints into the final table
     table = []
     table.append(objective_row)
     for i in range(num_terms):
         A[i].append(b[i])
         table.append(A[i])
     
-    # Combine the objective and constraints into the final table
-    # table = np.vstack([objective_row, table])
-
     # Round to the specified accuracy
-    # table = np.round(table, accuracy)
-
     table = roundTable(table, accuracy)
 
     return table    
@@ -112,9 +100,9 @@ if __name__ == "__main__":
             iteration += 1
             pivot = findPivot(table)
             table = replaceVars(table, pivot[0], pivot[1])
+            print()
             print(f"Iteration {iteration}:")
             printTable(table, accuracy)
-            print()
 
         num_vars = len(C) - C.count(0) - 1
         solution = get_solution(table, num_vars)
