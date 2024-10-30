@@ -1,5 +1,6 @@
 import numpy as np
 from matrixMethods import *
+from ProgTask1.main import simplex
 
 def list_to_column(c, A, b):
     # Convert lists into column vector format
@@ -53,6 +54,7 @@ def interior_point(x, A, c, alpha, accuracy):
 if __name__ == "__main__":
     # Getting user input
     c, A, b, accuracy, x = get_user_input()
+
     alpha_values = [0.5, 0.9]
     
     # To display the number of decimals
@@ -61,9 +63,44 @@ if __name__ == "__main__":
     # Running the Interior-Point method for each alpha
     for alpha in alpha_values:
         print(f"\nResults for α = {alpha}")
+        i = 1
         x_old = x
-        for i in range(1, 6):  # 5 iterations
+        while True:  # 5 iterations
             # Perform the interior point computation
             x_new = vectorOfMatrix(interior_point(x_old, A, c, alpha, accuracy))
             print(f'Iteration {i} with α = {alpha}: {x_new}')
+            
             x_old = x_new
+            
+            normal = sum([elem ** 2 for elem in x_new]) ** 0.5
+
+            if normal <= accuracy:
+                break
+
+            if i == 5:
+                break
+            
+            i += 1
+
+    c_simp = transpose(c)[0]
+    b_simp = transpose(b)[0]
+    print("\nSIMPLEX METHOD")
+    simplex(c_simp, A, b_simp, accuracy)
+
+'''
+1 1 0 0
+2
+2 4 1 0
+1 3 0 -1
+16 9
+2
+0.5 3.5 1 2
+
+
+2 4 0
+1
+2 2 4
+8
+2
+2 2 4
+'''

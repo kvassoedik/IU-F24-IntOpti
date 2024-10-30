@@ -45,7 +45,7 @@ def vectorOfMatrix(matrix):
 def maxABS(matrix):
     m = 0
     for i in range(len(matrix)):
-        for j in range(len(matrix[0])):
+        for j in range(len(matrix[i])):
             if matrix[i][j] < 0 and abs(matrix[i][j]) > m:
                 m = abs(matrix[i][j])
     return m
