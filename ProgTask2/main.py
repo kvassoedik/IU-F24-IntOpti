@@ -51,6 +51,9 @@ def interior_point(x, A, c, alpha, accuracy):
     # Round to the specified accuracy
     return roundTable(multiply(D, x_), accuracy)
 
+def dumbRound(vector, accuracy):
+    return [round(value, accuracy) for value in vector] 
+
 if __name__ == "__main__":
     # Getting user input
     c, A, b, accuracy, x = get_user_input()
@@ -70,15 +73,10 @@ if __name__ == "__main__":
             x_new = vectorOfMatrix(interior_point(x_old, A, c, alpha, accuracy))
             print(f'Iteration {i} with α = {alpha}: {x_new}')
             
+            if dumbRound(x_new, 3) == dumbRound(x_old, 3):
+                break
+
             x_old = x_new
-            
-            normal = sum([elem ** 2 for elem in x_new]) ** 0.5
-
-            if normal <= accuracy:
-                break
-
-            if i == 5:
-                break
             
             i += 1
 
@@ -88,19 +86,23 @@ if __name__ == "__main__":
     simplex(c_simp, A, b_simp, accuracy)
 
 '''
+Lab 5 Task 1
 1 1 0 0
 2
 2 4 1 0
 1 3 0 -1
 16 9
-2
+7
 0.5 3.5 1 2
 
+Lab 3 Task 1??
+9 10 16 0 0 0
+3
+18 15 12 1 0 0
+6 4 8 0 1 0
+5 3 3 0 0 1
+360 192 180
+7
+1 1 1 315 174 169
 
-2 4 0
-1
-2 2 4
-8
-2
-2 2 4
 '''
