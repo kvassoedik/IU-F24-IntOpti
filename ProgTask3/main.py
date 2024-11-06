@@ -1,3 +1,7 @@
+from asyncio.windows_events import INFINITE
+from sys import maxsize
+import copy
+
 def get_input():
     S = [int(x) for x in input("Enter coefficients of supply: ").split()]
     C = []
@@ -42,6 +46,74 @@ def eliminate_column(C, j, coeff):
             C[i][j] = -1
     return C
 
+def find_vogels_penalty(C):
+    row_penalty = []
+    col_penalty = []
+
+    # Calculating row penalties
+    for i in range(len(C)):
+        row_values = sorted([c for c in C[i]])
+        row_penalty.append(row_values[1] - row_values[0])
+
+    # Calculating column penalties
+    for col in range(len(C[0])):
+        col_values = sorted([C[i][col] for i in range(len(C))])
+        col_penalty.append(col_values[1] - col_values[0])
+
+    return row_penalty, col_penalty
+
+def vogels_approximation(S, C, D):
+    answer = 0
+    while sum(S) > 0 or sum(D) > 0:
+        row_penalty, col_penalty = find_vogels_penalty(C)
+        max_row_penalty = max(row_penalty)
+        max_col_penalty = max(col_penalty)
+
+        # Determine if we allocate based on row or column penalty
+        if max_row_penalty >= max_col_penalty:
+            # Find the row with the maximum row difference
+            row_idx = row_penalty.index(max_row_penalty)
+            # Find the minimum element in that row which is not maxsize
+            min_cost = min([c for c in C[row_idx] if c != maxsize])
+            col_idx = C[row_idx].index(min_cost)
+
+            # Allocate as much as possible to the selected cell
+            allocation = min(S[row_idx], D[col_idx])
+            answer += allocation * min_cost
+            S[row_idx] -= allocation
+            D[col_idx] -= allocation
+
+            # Mark the row or column as unavailable if supply or demand is exhausted
+            if S[row_idx] == 0:
+                for j in range(len(C[row_idx])):
+                    C[row_idx][j] = maxsize
+            if D[col_idx] == 0:
+                for i in range(len(C)):
+                    C[i][col_idx] = maxsize
+
+        else:
+            # Find the column with the maximum penalty
+            col_idx = col_penalty.index(max_col_penalty)
+            # Find the minimum element in that column which is not maxsize
+            min_cost = min([C[i][col_idx] for i in range(len(C)) if C[i][col_idx] != maxsize])
+            row_idx = [C[i][col_idx] for i in range(len(C))].index(min_cost)
+
+            # Allocate as much as possible to the selected cell
+            allocation = min(S[row_idx], D[col_idx])
+            answer += allocation * min_cost
+            S[row_idx] -= allocation
+            D[col_idx] -= allocation
+
+            # Mark the row or column as unavailable if supply or demand is exhausted
+            if S[row_idx] == 0:
+                for j in range(len(C[row_idx])):
+                    C[row_idx][j] = maxsize
+            if D[col_idx] == 0:
+                for i in range(len(C)):
+                    C[i][col_idx] = maxsize
+
+    print("Vogel's Approximation Method:", answer)
+
 def north_west_corner(S, C, D):
     coeff = [[0 for _ in range(len(C[0]))] for _ in range(len(C))]
     for i in range(len(C)):
@@ -65,11 +137,17 @@ if __name__ == "__main__":
         S, C, D = get_input()
         if not check_applicability(S, C, D):
             print("The method is not applicable!")
-        elif sum(S)!= sum(D):
+        elif sum(S) != sum(D):
             print("The problem is not balanced.")
         else:
             print_table(S, C, D)
-            north_west_corner(S, C, D)
+
+            # Make copies of S, C, and D for each method
+            S_nwc, C_nwc, D_nwc = copy.deepcopy(S), copy.deepcopy(C), copy.deepcopy(D)
+            north_west_corner(S_nwc, C_nwc, D_nwc)
+
+            S_vam, C_vam, D_vam = copy.deepcopy(S), copy.deepcopy(C), copy.deepcopy(D)
+            vogels_approximation(S_vam, C_vam, D_vam)
     except ValueError:
         print("The method is not applicable!")
 
@@ -95,4 +173,10 @@ Lab 7 Task 5
 2 3 1 5
 3 2 4 4
 30 30 10 20
+
+300 400 500
+3 1 7 4
+2 6 5 9
+8 3 3 2
+250 350 400 200
 '''
