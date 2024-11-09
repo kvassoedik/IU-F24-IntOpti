@@ -114,6 +114,66 @@ def vogels_approximation(S, C, D):
 
     print("Vogel's Approximation Method:", answer)
 
+def russells_approximation(S, C, D):
+    supply = S[:]
+    demand = D[:]
+    allocation = [[0] * len(D) for _ in range(len(S))]
+    total_cost = 0
+
+    while any(supply) and any(demand):
+        # Calculate row averages
+        row_avg = []
+        for row in C:
+            valid_values = [c for c in row if c != maxsize]
+            row_avg.append(sum(valid_values) / len(valid_values) if valid_values else maxsize)
+
+        # Calculate column averages
+        col_avg = []
+        for j in range(len(D)):
+            column_values = [C[i][j] for i in range(len(S)) if C[i][j] != maxsize]
+            col_avg.append(sum(column_values) / len(column_values) if column_values else maxsize)
+
+        # Calculate opportunity costs
+        opportunity_costs = [
+            [(C[i][j] - row_avg[i] - col_avg[j]) if C[i][j] != maxsize else -maxsize for j in range(len(D))]
+            for i in range(len(S))
+        ]
+
+        # Find cell with the maximum opportunity cost
+        max_cost = -maxsize
+        max_i, max_j = -1, -1
+        for i in range(len(S)):
+            for j in range(len(D)):
+                if opportunity_costs[i][j] > max_cost:
+                    max_cost = opportunity_costs[i][j]
+                    max_i, max_j = i, j
+
+        # Exit if no valid cell found (shouldn't happen unless all are exhausted)
+        if max_i == -1 or max_j == -1:
+            break
+
+        # Allocate as much as possible
+        allocation_amount = min(supply[max_i], demand[max_j])
+        allocation[max_i][max_j] = allocation_amount
+        total_cost += allocation_amount * C[max_i][max_j]
+
+        # Update supply and demand
+        supply[max_i] -= allocation_amount
+        demand[max_j] -= allocation_amount
+
+        # Mark exhausted rows or columns
+        if supply[max_i] == 0:
+            for j in range(len(D)):
+                C[max_i][j] = maxsize
+        if demand[max_j] == 0:
+            for i in range(len(S)):
+                C[i][max_j] = maxsize
+
+    print("\nRussell's Approximation Method:", total_cost)
+    print("Initial Feasible Solution Matrix (x0):")
+    for row in allocation:
+        print(row)
+
 def north_west_corner(S, C, D):
     coeff = [[0 for _ in range(len(C[0]))] for _ in range(len(C))]
     for i in range(len(C)):
@@ -148,6 +208,9 @@ if __name__ == "__main__":
 
             S_vam, C_vam, D_vam = copy.deepcopy(S), copy.deepcopy(C), copy.deepcopy(D)
             vogels_approximation(S_vam, C_vam, D_vam)
+
+            S_russell, C_russell, D_russell = copy.deepcopy(S), copy.deepcopy(C), copy.deepcopy(D)
+            russells_approximation(S_russell, C_russell, D_russell)
     except ValueError:
         print("The method is not applicable!")
 
@@ -179,4 +242,10 @@ Lab 7 Task 5
 2 6 5 9
 8 3 3 2
 250 350 400 200
+
+100 150 200
+5 8 6 7
+6 7 8 5
+7 5 6 8
+120 130 100 100
 '''
