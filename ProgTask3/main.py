@@ -1,6 +1,8 @@
 from asyncio.windows_events import INFINITE
+import sys
 from sys import maxsize
 import copy
+import numpy as np
 
 def get_input():
     S = [int(x) for x in input("Enter coefficients of supply: ").split()]
@@ -46,6 +48,63 @@ def eliminate_column(C, j, coeff):
             C[i][j] = -1
     return C
 
+def get_solution(taken):
+    b = {}
+    rowsUsed = []
+    colsUsed = []
+    for i in range(len(taken)):
+        for j in range(len(taken[0])):
+            if taken[i][j]:
+                b[(i, j)] = taken[i][j]
+                rowsUsed.append(i)
+                colsUsed.append(j)
+    rowsUsed = sorted(list(set(rowsUsed)))
+    colsUsed = sorted(list(set(colsUsed)))
+     
+    alphas = ["unknown" for _ in range(len(rowsUsed))]
+    alphas[0] = 0
+    betas = ["unknown" for _ in range(len(colsUsed))]
+    while any(a == "unknown" for a in alphas) and any(be == "unknown" for be in betas):
+        for k, v in b.items():
+            if alphas[k[0]] != "unknown" and betas[k[1]] == "unknown":
+                betas[k[1]] = v + alphas[k[0]]
+            elif betas[k[1]]!= "unknown" and alphas[k[0]] == "unknown":
+                alphas[k[0]] = betas[k[1]] - v
+    print("Initial Solution Vector: ", end="")
+    for alpha in alphas:
+        print(alpha, end=" ")
+    for beta in betas:
+        print(beta, end=" ")
+    print("\n")
+
+def get_feasible_solution(allocation, C):
+    A = []
+    b = []
+
+    for i in range(len(allocation)):
+        for j in range(len(allocation[0])):
+            if allocation[i][j] != 0:
+                r = [0] * (len(allocation) + len(allocation[0]))
+                r[i] = -1
+                r[len(allocation) + j] = 1
+                A.append(r)
+                b.append(C[i][j])
+
+    amount = len(A[0]) - len(A)
+    for i in range(amount):
+        r = [0] * (len(allocation) + len(allocation[0]))
+        r[i] = 1
+        A.append(r)
+        b.append(0)
+
+    try:
+        sol = np.linalg.solve(np.array(A), np.array(b))
+        print("Initial Feasible Solution: ", sol)
+    except Exception:
+        raise ValueError()
+
+
+
 def find_vogels_penalty(C):
     row_penalty = []
     col_penalty = []
@@ -63,7 +122,11 @@ def find_vogels_penalty(C):
     return row_penalty, col_penalty
 
 def vogels_approximation(S, C, D):
-    answer = 0
+    #Initialize allocation matrix with zeros
+    allocation = [[0] * len(D) for _ in range(len(S))]
+    answer = 0 # Total cost
+    cost = copy.deepcopy(C)
+
     while sum(S) > 0 or sum(D) > 0:
         row_penalty, col_penalty = find_vogels_penalty(C)
         max_row_penalty = max(row_penalty)
@@ -78,10 +141,11 @@ def vogels_approximation(S, C, D):
             col_idx = C[row_idx].index(min_cost)
 
             # Allocate as much as possible to the selected cell
-            allocation = min(S[row_idx], D[col_idx])
-            answer += allocation * min_cost
-            S[row_idx] -= allocation
-            D[col_idx] -= allocation
+            allocation_amount = min(S[row_idx], D[col_idx])
+            allocation[row_idx][col_idx] = allocation_amount # Track allocation
+            answer += allocation_amount * min_cost
+            S[row_idx] -= allocation_amount
+            D[col_idx] -= allocation_amount
 
             # Mark the row or column as unavailable if supply or demand is exhausted
             if S[row_idx] == 0:
@@ -99,10 +163,11 @@ def vogels_approximation(S, C, D):
             row_idx = [C[i][col_idx] for i in range(len(C))].index(min_cost)
 
             # Allocate as much as possible to the selected cell
-            allocation = min(S[row_idx], D[col_idx])
-            answer += allocation * min_cost
-            S[row_idx] -= allocation
-            D[col_idx] -= allocation
+            allocation_amount = min(S[row_idx], D[col_idx])
+            allocation[row_idx][col_idx] = allocation_amount # Track allocation
+            answer += allocation_amount * min_cost
+            S[row_idx] -= allocation_amount
+            D[col_idx] -= allocation_amount
 
             # Mark the row or column as unavailable if supply or demand is exhausted
             if S[row_idx] == 0:
@@ -111,36 +176,64 @@ def vogels_approximation(S, C, D):
             if D[col_idx] == 0:
                 for i in range(len(C)):
                     C[i][col_idx] = maxsize
-
     print("Vogel's Approximation Method:", answer)
+    get_feasible_solution(allocation, cost)
+
+def calculate_dual_variables(allocation, C):
+    # Initialize alpha and beta arrays
+    alphas = ["unknown" for _ in range(len(allocation))]
+    betas = ["unknown" for _ in range(len(allocation[0]))]
+    alphas[0] = 0 
+
+    # Track allocations to assign alpha and beta values iteratively
+    assigned = False
+    while not assigned:
+        assigned = True
+        for i in range(len(allocation)):
+            for j in range(len(allocation[0])):
+                if allocation[i][j] != 0:  # Only for allocated cells
+                    if alphas[i] != "unknown" and betas[j] == "unknown":
+                        betas[j] = C[i][j] - alphas[i]
+                    elif betas[j] != "unknown" and alphas[i] == "unknown":
+                        alphas[i] = C[i][j] - betas[j]
+                    elif alphas[i] == "unknown" or betas[j] == "unknown":
+                        assigned = False  # Keep looping until all are assigned
+
+    # Convert"unknown values to 0 (if any remain unassigned)
+    alphas = [a if a != "unknown" else 0 for a in alphas]
+    betas = [b if b != "unknown" else 0 for b in betas]
+
+    # Return the solution vector
+    return alphas + betas
 
 def russells_approximation(S, C, D):
     supply = S[:]
     demand = D[:]
     allocation = [[0] * len(D) for _ in range(len(S))]
     total_cost = 0
+    cost = copy.deepcopy(C)
 
     while any(supply) and any(demand):
         # Calculate row averages
         row_avg = []
         for row in C:
-            valid_values = [c for c in row if c != maxsize]
-            row_avg.append(sum(valid_values) / len(valid_values) if valid_values else maxsize)
+            valid_values = [c for c in row if c != sys.maxsize]
+            row_avg.append(sum(valid_values) / len(valid_values) if valid_values else sys.maxsize)
 
         # Calculate column averages
         col_avg = []
         for j in range(len(D)):
-            column_values = [C[i][j] for i in range(len(S)) if C[i][j] != maxsize]
-            col_avg.append(sum(column_values) / len(column_values) if column_values else maxsize)
+            column_values = [C[i][j] for i in range(len(S)) if C[i][j] != sys.maxsize]
+            col_avg.append(sum(column_values) / len(column_values) if column_values else sys.maxsize)
 
         # Calculate opportunity costs
         opportunity_costs = [
-            [(C[i][j] - row_avg[i] - col_avg[j]) if C[i][j] != maxsize else -maxsize for j in range(len(D))]
+            [(C[i][j] - row_avg[i] - col_avg[j]) if C[i][j] != sys.maxsize else -sys.maxsize for j in range(len(D))]
             for i in range(len(S))
         ]
 
         # Find cell with the maximum opportunity cost
-        max_cost = -maxsize
+        max_cost = -sys.maxsize
         max_i, max_j = -1, -1
         for i in range(len(S)):
             for j in range(len(D)):
@@ -164,15 +257,17 @@ def russells_approximation(S, C, D):
         # Mark exhausted rows or columns
         if supply[max_i] == 0:
             for j in range(len(D)):
-                C[max_i][j] = maxsize
+                C[max_i][j] = sys.maxsize
         if demand[max_j] == 0:
             for i in range(len(S)):
-                C[i][max_j] = maxsize
+                C[i][max_j] = sys.maxsize
+
+    # Calculate dual variables (solution vector)
+    solution_vector = calculate_dual_variables(allocation, cost)
 
     print("\nRussell's Approximation Method:", total_cost)
-    print("Initial Feasible Solution Matrix (x0):")
-    for row in allocation:
-        print(row)
+
+    print("Initial Solution Vector:", solution_vector)
 
 def north_west_corner(S, C, D):
     coeff = [[0 for _ in range(len(C[0]))] for _ in range(len(C))]
@@ -191,6 +286,12 @@ def north_west_corner(S, C, D):
         for j in range(len(C[0])):
             sum += coeff[i][j] * C[i][j]
     print("\nNorth-West Corner Result:", sum)
+    sol = [[0 for _ in range(len(C[0]))] for _ in range(len(C))]
+    for i in range(len(coeff)):
+        for j in range(len(coeff[0])):
+            if coeff[i][j] != 0:
+                sol[i][j] = C[i][j]
+    get_solution(sol)
 
 if __name__ == "__main__":
     try:
