@@ -63,7 +63,9 @@ def find_vogels_penalty(C):
     return row_penalty, col_penalty
 
 def vogels_approximation(S, C, D):
+    allocation = [[0] * len(D) for _ in range(len(S))]
     answer = 0
+
     while sum(S) > 0 or sum(D) > 0:
         row_penalty, col_penalty = find_vogels_penalty(C)
         max_row_penalty = max(row_penalty)
@@ -78,10 +80,11 @@ def vogels_approximation(S, C, D):
             col_idx = C[row_idx].index(min_cost)
 
             # Allocate as much as possible to the selected cell
-            allocation = min(S[row_idx], D[col_idx])
-            answer += allocation * min_cost
-            S[row_idx] -= allocation
-            D[col_idx] -= allocation
+            allocation_amount = min(S[row_idx], D[col_idx])
+            allocation[row_idx][col_idx] = allocation_amount # Track allocation
+            answer += allocation_amount * min_cost
+            S[row_idx] -= allocation_amount
+            D[col_idx] -= allocation_amount
 
             # Mark the row or column as unavailable if supply or demand is exhausted
             if S[row_idx] == 0:
@@ -99,10 +102,11 @@ def vogels_approximation(S, C, D):
             row_idx = [C[i][col_idx] for i in range(len(C))].index(min_cost)
 
             # Allocate as much as possible to the selected cell
-            allocation = min(S[row_idx], D[col_idx])
-            answer += allocation * min_cost
-            S[row_idx] -= allocation
-            D[col_idx] -= allocation
+            allocation_amount = min(S[row_idx], D[col_idx])
+            allocation[row_idx][col_idx] = allocation_amount
+            answer += allocation_amount * min_cost
+            S[row_idx] -= allocation_amount
+            D[col_idx] -= allocation_amount
 
             # Mark the row or column as unavailable if supply or demand is exhausted
             if S[row_idx] == 0:
@@ -113,6 +117,9 @@ def vogels_approximation(S, C, D):
                     C[i][col_idx] = maxsize
 
     print("Vogel's Approximation Method:", answer)
+    print("Initial Feasible Solution Matrix (x0):")
+    for row in allocation:
+        print(row)
 
 def russells_approximation(S, C, D):
     supply = S[:]
