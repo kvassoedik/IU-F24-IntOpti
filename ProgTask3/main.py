@@ -1,6 +1,7 @@
 from asyncio.windows_events import INFINITE
 from sys import maxsize
 import copy
+import numpy as np
 
 def get_input():
     S = [int(x) for x in input("Enter coefficients of supply: ").split()]
@@ -75,6 +76,34 @@ def get_solution(taken):
         print(beta, end=" ")
     print("\n")
 
+def get_feasible_solution(allocation, C):
+    A = []
+    b = []
+
+    for i in range(len(allocation)):
+        for j in range(len(allocation[0])):
+            if allocation[i][j] != 0:
+                r = [0] * (len(allocation) + len(allocation[0]))
+                r[i] = -1
+                r[len(allocation) + j] = 1
+                A.append(r)
+                b.append(C[i][j])
+
+    amount = len(A[0]) - len(A)
+    for i in range(amount):
+        r = [0] * (len(allocation) + len(allocation[0]))
+        r[i] = 1
+        A.append(r)
+        b.append(0)
+
+    try:
+        sol = np.linalg.solve(np.array(A), np.array(b))
+        print("Initial Feasible Solution: ", sol)
+    except Exception:
+        raise ValueError()
+
+
+
 def find_vogels_penalty(C):
     row_penalty = []
     col_penalty = []
@@ -92,7 +121,11 @@ def find_vogels_penalty(C):
     return row_penalty, col_penalty
 
 def vogels_approximation(S, C, D):
-    answer = 0
+    #Initialize allocation matrix with zeros
+    allocation = [[0] * len(D) for _ in range(len(S))]
+    answer = 0 # Total cost
+    cost = copy.deepcopy(C)
+
     while sum(S) > 0 or sum(D) > 0:
         row_penalty, col_penalty = find_vogels_penalty(C)
         max_row_penalty = max(row_penalty)
@@ -107,10 +140,11 @@ def vogels_approximation(S, C, D):
             col_idx = C[row_idx].index(min_cost)
 
             # Allocate as much as possible to the selected cell
-            allocation = min(S[row_idx], D[col_idx])
-            answer += allocation * min_cost
-            S[row_idx] -= allocation
-            D[col_idx] -= allocation
+            allocation_amount = min(S[row_idx], D[col_idx])
+            allocation[row_idx][col_idx] = allocation_amount # Track allocation
+            answer += allocation_amount * min_cost
+            S[row_idx] -= allocation_amount
+            D[col_idx] -= allocation_amount
 
             # Mark the row or column as unavailable if supply or demand is exhausted
             if S[row_idx] == 0:
@@ -128,10 +162,11 @@ def vogels_approximation(S, C, D):
             row_idx = [C[i][col_idx] for i in range(len(C))].index(min_cost)
 
             # Allocate as much as possible to the selected cell
-            allocation = min(S[row_idx], D[col_idx])
-            answer += allocation * min_cost
-            S[row_idx] -= allocation
-            D[col_idx] -= allocation
+            allocation_amount = min(S[row_idx], D[col_idx])
+            allocation[row_idx][col_idx] = allocation_amount # Track allocation
+            answer += allocation_amount * min_cost
+            S[row_idx] -= allocation_amount
+            D[col_idx] -= allocation_amount
 
             # Mark the row or column as unavailable if supply or demand is exhausted
             if S[row_idx] == 0:
@@ -141,6 +176,7 @@ def vogels_approximation(S, C, D):
                 for i in range(len(C)):
                     C[i][col_idx] = maxsize
     print("Vogel's Approximation Method:", answer)
+    get_feasible_solution(allocation, cost)
 
 def russells_approximation(S, C, D):
     supply = S[:]
@@ -227,7 +263,7 @@ def north_west_corner(S, C, D):
     get_solution(sol)
 
 if __name__ == "__main__":
-    # try:
+    try:
         S, C, D = get_input()
         if not check_applicability(S, C, D):
             print("The method is not applicable!")
@@ -245,8 +281,8 @@ if __name__ == "__main__":
 
             S_russell, C_russell, D_russell = copy.deepcopy(S), copy.deepcopy(C), copy.deepcopy(D)
             russells_approximation(S_russell, C_russell, D_russell)
-    # except ValueError:
-    #     print("The method is not applicable!")
+    except ValueError:
+        print("The method is not applicable!")
 
 
 '''
