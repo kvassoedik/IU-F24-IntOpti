@@ -39,6 +39,26 @@ def goldsec():
             b = x2
     return (a + b) / 2, f(func, (a + b) / 2)
 
+def grad_ascent():
+    # Function and its derivative
+    def f(x):
+        return -x**2 + 4*x + 1
+    
+    def derivative(x):
+        return -2*x + 4
+
+    # User inputs
+    x0 = float(input("Enter initial guess x0: "))
+    alpha = float(input("Enter learning rate alpha: "))
+    N = int(input("Enter number of iterations N: "))
+    
+    # Gradient ascent logic
+    x = x0
+    for i in range(N):
+        gradient = derivative(x) # Calculate gradient
+        x = x + alpha * gradient  # Update x using gradient ascent rule
+    
+    return x, f(x)
 
 if __name__ == "__main__":
     print("BISECTION METHOD")
@@ -50,6 +70,11 @@ if __name__ == "__main__":
     gsx, gsf = goldsec()
     print(f"Minimum x: {gsx}, Minimum function value: {gsf}")
 
+    print()
+
+    print("GRADIENT ASCENT METHOD")
+    max_x, max_f = grad_ascent()
+    print(f"Maximum x: {max_x}, Maximum function value: {max_f}")
 
 """
 TESTING
@@ -63,4 +88,9 @@ Golden Section
 1 -4 7
 0 5
 0.0001
+
+Gradient Ascent
+0
+0.1
+100
 """
